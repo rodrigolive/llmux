@@ -1,0 +1,110 @@
+#!/usr/bin/env bun
+
+import sade from 'sade';
+import fs from 'fs';
+import path from 'path';
+
+// Dynamically load all command modules from src/cmd directory
+async function loadCommands(prog) {
+  const cmdDir = path.join(path.dirname(process.argv[1]), '../src/cmd');
+
+  try {
+    const files = fs.readdirSync(cmdDir);
+
+    for (const file of files) {
+      if (file.endsWith('.js')) {
+        const commandPath = path.join(cmdDir, file);
+        try {
+          const commandModule = await import(commandPath);
+          const command = commandModule.default;
+
+          if (command && typeof command === 'object') {
+            // Use filename (without extension) as command name
+            const commandName = path.basename(file, '.js');
+
+            // Register the command with sade
+            let cmd = prog.command(commandName);
+
+            if (command.describe) cmd.describe(command.describe);
+            if (command.alias) cmd.alias(command.alias);
+            if (command.options) {
+              command.options.forEach(opt => {
+                cmd.option(opt.name, opt.description, opt.default);
+              });
+            }
+            // Add examples if provided
+            if (command.examples) {
+              command.examples.forEach(example => {
+                cmd.example(example);
+              });
+            }
+            if (command.action) cmd.action(command.action);
+          }
+        } catch (importError) {
+          console.error(`Error importing ${file}:`, importError);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error loading commands:', error);
+  }
+}
+
+// Main application setup
+async function main() {
+  const prog = sade('llmux')
+    .version('1.0.0')
+    .option('--verbose, -v', 'Enable verbose output', false);
+
+  // Load commands dynamically
+  await loadCommands(prog);
+
+  // Add examples to show available commands
+  prog.example('llmux start');
+  prog.example('llmux start --port 8082');
+  prog.example('llmux start --config config.toml --verbose');
+
+  // Check if any command was provided
+  const args = process.argv.slice(2);
+  if (args.length === 0 || (args.length === 1 && (args[0] === '--help' || args[0] === '-h' || args[0] === '--version' || args[0] === '-V'))) {
+    // Show manual help with all commands and examples
+    console.log(`
+LLMux v1.0.0
+
+A modern CLI proxy for multiplexing LLM providers.
+
+USAGE:
+  llmux <command> [options]
+
+COMMANDS:
+  start, s          Start the LLMux server
+
+EXAMPLES:
+  llmux start                                    Start the server with default config
+  llmux start --port 8082                        Start server on port 8082
+  llmux start --host 0.0.0.0 --port 8082         Start server on specific host/port
+  llmux start --config config.toml --verbose    Use custom config with verbose output
+  llmux start --https --ssl-key ./key.pem --ssl-cert ./cert.pem    Start with HTTPS
+  llmux s -p 8082 --config custom.toml          Short form with custom config
+
+OPTIONS:
+  --verbose, -v     Enable verbose output
+  --help, -h        Show this help message
+  --version, -V     Show version number
+
+For more help on a specific command:
+  llmux start --help`);
+    process.exit(0);
+  }
+
+  // Parse command line arguments
+  prog.parse(process.argv);
+}
+
+// Only run main if this file is executed directly (not imported)
+if (import.meta.main) {
+  main().catch(error => {
+    console.error('Error:', error);
+    process.exit(1);
+  });
+}

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-import { startServer } from "./src/server.js";
-import { Colors } from "./src/logging.js";
+import { startServer } from "./server.js";
+import { Colors } from "./logging.js";
 
 const argv = Bun.argv.slice(2);
 if (argv.includes("--help") || argv.includes("-h")) {
@@ -52,3 +52,4 @@ function shutdown(sig) {
 }
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
+

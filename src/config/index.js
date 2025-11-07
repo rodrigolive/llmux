@@ -31,6 +31,10 @@ export class Config {
     this.request_timeout = Number(cfg?.request_timeout ?? 90);
     this.max_retries = Number(cfg?.max_retries ?? 2);
 
+    // Logging Configuration
+    this.log = cfg?.log ?? {};
+    this.log_request_details = Boolean(this.log?.request_details ?? false);
+
     // HTTPS/SSL Configuration
     this.https_enabled = Boolean(cfg?.https_enabled ?? false);
     this.ssl_key_file = String(cfg?.ssl_key_file ?? "");

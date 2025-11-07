@@ -97,6 +97,14 @@ export function buildMessagesHandler({ config, model_manager, openai_client }) {
 
       const display_model = body?.model?.includes("/") ? body.model.split("/").pop() : body?.model;
 
+      // Extract request flags for logging
+      const has_images = config._hasImageContent(body);
+      const thinking = body.thinking?.type === 'enabled';
+      const stream = !!body?.stream;
+      const temperature = body?.temperature ?? null;
+      const max_tokens = body?.max_tokens ?? null;
+      const tools = body?.tools ?? null;
+
       // Use our pre-selected backend
       log_request_beautifully({
         method: "POST",
@@ -110,6 +118,13 @@ export function buildMessagesHandler({ config, model_manager, openai_client }) {
         output_tokens: output_tokens || undefined,
         tokens_per_sec: tokens_per_sec || undefined,
         duration_ms,
+        config,
+        has_images,
+        thinking,
+        stream,
+        temperature,
+        max_tokens,
+        tools,
       });
 
       // Restore backend and return response

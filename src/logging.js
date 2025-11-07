@@ -48,6 +48,13 @@ export function log_request_beautifully({
   output_tokens,
   tokens_per_sec,
   duration_ms,
+  config = null,
+  has_images = false,
+  thinking = false,
+  stream = false,
+  temperature = null,
+  max_tokens = null,
+  tools = null,
 }) {
   const claude_display = `${Colors.CYAN}${claude_model}${Colors.RESET}`;
   let openai_display = openai_model || "";
@@ -65,7 +72,25 @@ export function log_request_beautifully({
     ? `${Colors.GREEN}✓ ${status_code} OK${Colors.RESET}`
     : `${Colors.RED}✗ ${status_code}${Colors.RESET}`;
 
-  const log_line = `${Colors.BOLD}${method} ${path}${Colors.RESET} ${status_str}`;
+  const timestamp = new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, 'Z');
+
+  // Build request flags (only if config allows)
+  let flags_str = '';
+  if (config?.log_request_details) {
+    const flags = [];
+    if (has_images) flags.push('image');
+    if (thinking) flags.push('thinking');
+    if (stream) flags.push('stream');
+    if (max_tokens != null) flags.push(`max=${max_tokens}`);
+    if (temperature != null) flags.push(`t=${temperature}`);
+    if (tools && Array.isArray(tools) && tools.length > 0) {
+      const tool_names = tools.map(t => t.name || t).filter(Boolean).join(',');
+      if (tool_names) flags.push(`tools=${tool_names}`);
+    }
+    flags_str = flags.length > 0 ? `${Colors.DIM}▤ ${flags.join(', ')}${Colors.RESET}` : '';
+  }
+
+  const log_line = `${Colors.BOLD}${method} ${path}${Colors.RESET} ${status_str} ${Colors.DIM}⧗ ${timestamp}${Colors.RESET}${flags_str ? ' ' + flags_str : ''}`;
   const parts = [claude_display, "→", openai_display, tools_str, messages_str, input_tokens_str, output_tokens_str, "tks"];
   let model_line = parts.filter(p => String(p).trim()).join(" ");
   if (tokens_per_sec != null) model_line += ` ${tps_str}`;

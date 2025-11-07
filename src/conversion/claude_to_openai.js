@@ -3,6 +3,8 @@ import { toResponsesTools, normalizeToolChoice } from "./tools.js";
 import { countTokensFast } from "../tokenize/tiktoken.js";
 import { logger } from "../logging.js";
 import { applyKeyRenames } from "../utils/key_rename.js";
+import { applyKeyDeletions } from "../utils/key_delete.js";
+import { applyKeyAdditions } from "../utils/key_add.js";
 
 export function convert_claude_user_message(msg) {
   if (!msg || msg.role !== Constants.ROLE_USER) {
@@ -252,9 +254,18 @@ export function convert_claude_to_openai(claude_request, model_manager, config) 
     }
   }
 
-  // Apply backend-specific key renaming before sending request
+  // Apply backend-specific key transformations before sending request
   const backendConfig = config.getBackendConfig(openai_model_full);
-  const finalRequest = applyKeyRenames(openai_request, backendConfig);
+  let finalRequest = openai_request;
+
+  // Apply key deletions first
+  finalRequest = applyKeyDeletions(finalRequest, backendConfig);
+
+  // Then apply key additions
+  finalRequest = applyKeyAdditions(finalRequest, backendConfig);
+
+  // Finally apply key renames
+  finalRequest = applyKeyRenames(finalRequest, backendConfig);
 
   logger.debug("OpenAI request payload:", JSON.stringify(finalRequest, null, 2));
   return finalRequest;

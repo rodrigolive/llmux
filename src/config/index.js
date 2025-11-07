@@ -30,6 +30,12 @@ export class Config {
 
     this.request_timeout = Number(cfg?.request_timeout ?? 90);
     this.max_retries = Number(cfg?.max_retries ?? 2);
+
+    // HTTPS/SSL Configuration
+    this.https_enabled = Boolean(cfg?.https_enabled ?? false);
+    this.ssl_key_file = String(cfg?.ssl_key_file ?? "");
+    this.ssl_cert_file = String(cfg?.ssl_cert_file ?? "");
+    this.ssl_ca_file = String(cfg?.ssl_ca_file ?? "");
   }
 
   validate_api_key() {

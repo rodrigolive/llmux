@@ -9,9 +9,15 @@ import { buildRootHandler } from "./api/handlers/root.js";
 import { buildTestConnectionHandler } from "./api/handlers/test_connection.js";
 import { createRouter } from "./http/router.js";
 
-export async function startServer({ configPath = "config.toml", host = null, port = null } = {}) {
+export async function startServer({ configPath = "config.toml", host = null, port = null, https_enabled = null, ssl_key_file = null, ssl_cert_file = null, ssl_ca_file = null } = {}) {
   const config = await loadConfig(configPath);
   setLogLevel(config.log_level);
+
+  // Override config with CLI flags
+  if (https_enabled !== null) config.https_enabled = https_enabled;
+  if (ssl_key_file !== null) config.ssl_key_file = ssl_key_file;
+  if (ssl_cert_file !== null) config.ssl_cert_file = ssl_cert_file;
+  if (ssl_ca_file !== null) config.ssl_ca_file = ssl_ca_file;
 
   const model_manager = new ModelManager(config);
   const openai_client = new OpenAIClient(config, config.request_timeout);
@@ -39,16 +45,45 @@ export async function startServer({ configPath = "config.toml", host = null, por
   console.log(`   Min Tokens Policy: ${config.min_tokens_limit}`);
   console.log(`   Request Timeout: ${config.request_timeout}s`);
   console.log(`   Server: ${actualHost}:${actualPort}`);
+  console.log(`   HTTPS: ${config.https_enabled ? "Enabled" : "Disabled"}`);
+  if (config.https_enabled) {
+    if (config.ssl_key_file) console.log(`   SSL Key: ${config.ssl_key_file}`);
+    if (config.ssl_cert_file) console.log(`   SSL Cert: ${config.ssl_cert_file}`);
+    if (config.ssl_ca_file) console.log(`   SSL CA: ${config.ssl_ca_file}`);
+  }
   console.log(`   Client Authentication: ${config.tokens && Object.keys(config.tokens).length ? "Enabled" : "Disabled"}`);
   console.log("");
 
-  const server = Bun.serve({
+  const serverOptions = {
     hostname: actualHost,
     port: actualPort,
     idleTimeout: 120,
     development: process.env.NODE_ENV !== "production",
     fetch: router,
-  });
+  };
+
+  // Add SSL options if HTTPS is enabled
+  if (config.https_enabled) {
+    if (!config.ssl_key_file || !config.ssl_cert_file) {
+      throw new Error("HTTPS enabled but ssl_key_file or ssl_cert_file not specified in config");
+    }
+
+    try {
+      const keyContent = await Bun.file(config.ssl_key_file).text();
+      const certContent = await Bun.file(config.ssl_cert_file).text();
+      const caContent = config.ssl_ca_file ? await Bun.file(config.ssl_ca_file).text() : undefined;
+
+      serverOptions.tls = {
+        key: keyContent,
+        cert: certContent,
+        ca: caContent,
+      };
+    } catch (error) {
+      throw new Error(`Failed to load SSL certificates: ${error.message}`);
+    }
+  }
+
+  const server = Bun.serve(serverOptions);
 
   return { server, config };
 }

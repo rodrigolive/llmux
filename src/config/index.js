@@ -114,7 +114,7 @@ export class Config {
    */
   selectBackend(request, estimatedTokens = 0, failedBackends = []) {
     const needsVision = this._hasImageContent(request);
-    const needsThinking = request.thinking?.type === 'enabled';
+    const needsThinking = request.thinking?.type === 'enabled' || this._hasOpenAIThinking(request);
 
     // Filter out failed backends
     const availableBackends = this.backends.filter(
@@ -173,9 +173,23 @@ export class Config {
       if (!Array.isArray(message.content)) return false;
 
       return message.content.some(content =>
-        content.type === 'image'
+        content.type === 'image' || content.type === 'image_url'
       );
     });
+  }
+
+  /**
+   * Check if request contains thinking mode for OpenAI format
+   * @param {object} request - The request object
+   * @returns {boolean} True if request has thinking enabled
+   */
+  _hasOpenAIThinking(request) {
+    // OpenAI format thinking could be in different formats
+    // Check for reasoning_content in the request or specific model types
+    return request.model?.includes('o1') ||
+           request.model?.includes('o3') ||
+           request.thinking?.type === 'enabled' ||
+           request.reasoning_mode === true;
   }
 
   /**

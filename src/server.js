@@ -3,6 +3,7 @@ import { setLogLevel, logger, Colors } from "./logging.js";
 import { ModelManager } from "./model/manager.js";
 import { OpenAIClient } from "./provider/openai_client.js";
 import { buildMessagesHandler } from "./api/handlers/messages.js";
+import { buildChatCompletionsHandler } from "./api/handlers/chat_completions.js";
 import { buildCountTokensHandler } from "./api/handlers/count_tokens.js";
 import { buildHealthHandler } from "./api/handlers/health.js";
 import { buildRootHandler } from "./api/handlers/root.js";
@@ -27,6 +28,7 @@ export async function startServer({ configPath = "config.toml", host = null, por
     health: buildHealthHandler({ config }),
     testConnection: buildTestConnectionHandler({ config, openai_client }),
     messages: buildMessagesHandler({ config, model_manager, openai_client }),
+    chatCompletions: buildChatCompletionsHandler({ config, model_manager, openai_client }),
     countTokens: buildCountTokensHandler({ config, model_manager }),
   };
 
@@ -35,7 +37,7 @@ export async function startServer({ configPath = "config.toml", host = null, por
   const actualHost = host || config.host;
   const actualPort = port ? Number(port) : config.port;
 
-  console.log("🚀 Claude-to-OpenAI API Proxy v1.0.0 (Bun)");
+  console.log("🚀 Claude-to-OpenAI API Proxy v1.1.0 (Bun) - Now with /v1/chat/completions support");
   console.log("✅ Configuration loaded successfully");
   console.log(`   Backend: ${config.backend}`);
   if (Array.isArray(config.failover) && config.failover.length) {

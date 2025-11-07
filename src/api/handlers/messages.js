@@ -44,11 +44,17 @@ export function buildMessagesHandler({ config, model_manager, openai_client }) {
     const originalBackend = config.backend;
     const originalFailover = config.failover;
     config.backend = selectedBackend;
-    config.failover = []; // Disable failover since we pre-selected the right backend
+    // Set failover to all other available backends (excluding the selected one)
+    // Include both the primary backend and other failover backends
+    const allBackends = [originalBackend, ...originalFailover];
+    config.failover = allBackends.filter(backend => backend !== selectedBackend);
 
     try {
       // convert Claude -> OpenAI request
       const openai_request = convert_claude_to_openai(body, model_manager, config);
+
+      // Override the model in the OpenAI request to use our selected backend
+      openai_request.model = selectedBackend;
 
       // Count tokens for log (best effort)
       let num_tokens = null;

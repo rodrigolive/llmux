@@ -11,6 +11,7 @@ export function createRouter(handlers) {
     if (req.method === "GET" && path === "/test-connection") return handlers.testConnection(req);
 
     if (req.method === "POST" && path === "/v1/messages") return handlers.messages(req);
+    if (req.method === "POST" && path === "/v1/chat/completions") return handlers.chatCompletions(req);
     if (req.method === "POST" && path === "/v1/messages/count_tokens") return handlers.countTokens(req);
 
     return jsonResponse({ error: "Not Found" }, { status: 404 });

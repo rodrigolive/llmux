@@ -271,6 +271,13 @@ export class OpenAIClient {
           const errStr = String(e?.message || e || "").toLowerCase();
           const code = this._extract_error_code(e);
           logger.warning(`Failover backend ${backend} failed: ${String(e?.message || e)}`);
+
+          // Don't failover on authentication errors - these should be handled at the client level
+          if (code === "401" || errStr.includes("invalid_api_key") || errStr.includes("unauthorized") || errStr.includes("authentication")) {
+            logger.warning(`Authentication error on backend ${backend} - not failing over for auth issues`);
+            throw httpError(401, "Authentication failed");
+          }
+
           if (
             backend === this.config.backend &&
             (errStr.includes("tokens per day limit exceeded") || errStr.includes("day limit exceeded"))
@@ -317,6 +324,13 @@ export class OpenAIClient {
           const errStr = String(e?.message || e || "").toLowerCase();
           const code = this._extract_error_code(e);
           logger.warning(`Failover backend ${backend} failed for streaming: ${String(e?.message || e)}`);
+
+          // Don't failover on authentication errors - these should be handled at the client level
+          if (code === "401" || errStr.includes("invalid_api_key") || errStr.includes("unauthorized") || errStr.includes("authentication")) {
+            logger.warning(`Authentication error on backend ${backend} - not failing over for auth issues`);
+            throw httpError(401, "Authentication failed");
+          }
+
           if (
             backend === this.config.backend &&
             (errStr.includes("tokens per day limit exceeded") || errStr.includes("day limit exceeded"))

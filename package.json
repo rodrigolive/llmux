@@ -1,0 +1,26 @@
+{
+  "name": "llmux",
+  "type": "module",
+  "bin": {
+    "llmux": "./bin/llmux"
+  },
+  "scripts": {
+    "start": "bun run bin/llmux start",
+    "dev": "NODE_ENV=development bun run bin/llmux start",
+    "build": "bun build ./bin/llmux --compile --outfile dist/llmux",
+    "build:linux": "bun build --compile --target=bun-linux-x64 ./bin/llmux --outfile dist/llmux-linux",
+    "build:windows": "bun build --compile --target=bun-windows-x64 ./bin/llmux --outfile dist/llmux.exe",
+    "build:macos": "bun build --compile --target=bun-darwin-x64 ./bin/llmux --outfile dist/llmux-macos"
+  },
+  "dependencies": {
+    "@dqbd/tiktoken": "^1.0.0",
+    "sade": "^1.8.1",
+    "toml": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

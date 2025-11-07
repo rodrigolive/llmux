@@ -10,7 +10,9 @@
     "build": "bun build ./bin/llmux --compile --outfile dist/llmux",
     "build:linux": "bun build --compile --target=bun-linux-x64 ./bin/llmux --outfile dist/llmux-linux",
     "build:windows": "bun build --compile --target=bun-windows-x64 ./bin/llmux --outfile dist/llmux.exe",
-    "build:macos": "bun build --compile --target=bun-darwin-x64 ./bin/llmux --outfile dist/llmux-macos"
+    "build:macos": "bun build --compile --target=bun-darwin-x64 ./bin/llmux --outfile dist/llmux-macos",
+    "test": "jest --verbose",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@dqbd/tiktoken": "^1.0.0",
@@ -18,7 +20,9 @@
     "toml": "^3.0.0"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0"
   },
   "peerDependencies": {
     "typescript": "^5"

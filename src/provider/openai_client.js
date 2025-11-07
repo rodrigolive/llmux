@@ -175,13 +175,21 @@ export class OpenAIClient {
       }
       return result.response || result;
     }
-    // no failover
-    const res = await this._do_fetch(openai_request.model, openai_request, { requestId, streamDesired: false });
-    const json = await res.json();
-    if (json && typeof json === 'object') {
-      json._used_backend = openai_request.model;
+    // no failover - still need to handle errors gracefully
+    try {
+      const res = await this._do_fetch(openai_request.model, openai_request, { requestId, streamDesired: false });
+      const json = await res.json();
+      if (json && typeof json === 'object') {
+        json._used_backend = openai_request.model;
+      }
+      return json;
+    } catch (e) {
+      // Log the error nicely even when there's no failover
+      const code = this._extract_error_code(e);
+      const num_tokens = await this._calculate_token_count(openai_request);
+      log_failover_beautifully(code, openai_request.model, "none", num_tokens);
+      throw e;
     }
-    return json;
   }
 
   async *_create_stream(openai_request, { requestId, signal } = {}) {
@@ -227,8 +235,17 @@ export class OpenAIClient {
       yield* this._try_failover_stream(openai_request, { requestId, signal });
       return;
     }
-    this._last_used_backend = openai_request.model;
-    yield* this._create_stream(openai_request, { requestId, signal });
+    // no failover - still need to handle errors gracefully
+    try {
+      this._last_used_backend = openai_request.model;
+      yield* this._create_stream(openai_request, { requestId, signal });
+    } catch (e) {
+      // Log the error nicely even when there's no failover
+      const code = this._extract_error_code(e);
+      const num_tokens = await this._calculate_token_count(openai_request);
+      log_failover_beautifully(code, openai_request.model, "none", num_tokens);
+      throw e;
+    }
   }
 
   async _try_failover_request(openai_request, { requestId } = {}) {

@@ -5,7 +5,11 @@ import { countTokensFast } from "../tokenize/tiktoken.js";
 
 export function providerConfigFor(providerModelString, config) {
   let provider, model;
-  if (providerModelString.includes(":")) [provider, model] = providerModelString.split(":", 2);
+  if (providerModelString.includes(":")) {
+    const colonIndex = providerModelString.indexOf(":");
+    provider = providerModelString.slice(0, colonIndex);
+    model = providerModelString.slice(colonIndex + 1);
+  }
   else {
     provider = config.provider;
     model = providerModelString;

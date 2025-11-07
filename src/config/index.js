@@ -14,9 +14,9 @@ export class Config {
     if (!String(this.backend).includes(":")) {
       throw new Error("Backend must be in provider:model format");
     }
-    const [provider, model] = this.backend.split(":", 2);
-    this.provider = provider;
-    this.model = model;
+    const colonIndex = this.backend.indexOf(":");
+    this.provider = this.backend.slice(0, colonIndex);
+    this.model = this.backend.slice(colonIndex + 1);
 
     this.failover = Array.isArray(cfg?.failover) ? [...cfg.failover] : [];
 

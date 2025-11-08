@@ -72,7 +72,7 @@ export function log_request_beautifully({
     ? `${Colors.GREEN}✓ ${status_code} OK${Colors.RESET}`
     : `${Colors.RED}✗ ${status_code}${Colors.RESET}`;
 
-  const timestamp = new Date().toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, 'Z');
+  const timestamp = new Date().toISOString().replace('T', ' ');
 
   // Build request flags (only if config allows)
   let flags_str = '';

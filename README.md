@@ -1,21 +1,44 @@
-# ꙮ llmux
+<h1 align="center">
+    ꙮ LLMux
+</h1>
+<p align="center">
+    OpenAI-compatible gateway that multiplexes every LLM backend with intelligent routing and protocol translation.
+    <br>
+    One config, every model provider.
+</p>
+<p align="center">
+    <a href="#-quick-start">Quick Start</a> &bull;
+    <a href="CMD_LINE_APP.md">CLI Reference</a> &bull;
+    <a href="KEY_RENAME_FEATURE.md">Key Rename Flow</a>
+</p>
+<p align="center">
+    <a href="https://bun.sh">
+        <img src="https://img.shields.io/badge/Built%20with-Bun-000000?style=flat-square&logo=bun" alt="Built with Bun">
+    </a>
+    <a href="https://github.com/rod/llmux/actions">
+        <img src="https://img.shields.io/badge/CI-GitHub%20Actions-blue?style=flat-square&logo=githubactions" alt="GitHub Actions CI">
+    </a>
+    <a href="https://github.com/rod/llmux/blob/main/LICENSE">
+        <img src="https://img.shields.io/badge/License-GNU%20GPLv3-blue?style=flat-square" alt="GNU GPLv3 License">
+    </a>
+</p>
 
 **ꙮ llmux** is a sophisticated proxy server that acts as a universal adapter between Language Model APIs. It provides intelligent protocol translation, provider multiplexing, and automatic backend selection to create a seamless, resilient interface for your LLM applications.
 
-## ✨ Key Features
+## Key Features
 
-- **🔄 Protocol Translation** - Convert between Claude API and OpenAI API formats transparently
-- **🎯 Intelligent Routing** - Automatically select the optimal backend based on request requirements
-- **🚀 High Availability** - Built-in failover with smart cooldown periods
-- **👁️ Vision Support** - Handle image inputs in base64 format across providers
-- **🧠 Thinking Mode** - Support for reasoning models with special token allocation
-- **⚡ Streaming** - Real-time streaming responses for interactive applications
-- **🛠️ Tool Calling** - Full function/tool calling support with format translation
-- **🔐 Authentication** - Bearer token authentication for client access control
-- **📊 Rate Limiting** - Per-provider rate limits (daily, hourly, 5-hour windows)
-- **🔒 HTTPS Support** - SSL/TLS termination with custom certificates
+- Protocol Translation** - Convert between Claude API and OpenAI API formats transparently
+- Intelligent Routing** - Automatically select the optimal backend based on request requirements
+- High Availability** - Built-in failover with smart cooldown periods
+- Vision Support** - Handle image inputs in base64 format across providers
+- Thinking Mode** - Support for reasoning models with special token allocation
+- Streaming** - Real-time streaming responses for interactive applications
+- Tool Calling** - Full function/tool calling support with format translation
+- Authentication** - Bearer token authentication for client access control
+- Rate Limiting** - Per-provider rate limits (daily, hourly, 5-hour windows)
+- HTTPS Support** - SSL/TLS termination with custom certificates
 
-## 🏗️ Architecture
+## Architecture
 
 llmux is built with a modular, extensible architecture:
 
@@ -139,18 +162,18 @@ Simply configure your existing LLM client to point to the llmux server URL using
 ## 🛠️ Supported Features
 
 **Core Functionality**
-- ✅ Chat completions via both Claude and OpenAI API formats
-- ✅ Streaming responses for real-time interaction
-- ✅ Function/tool calling with automatic format translation
-- ✅ Vision/image analysis support
-- ✅ Thinking mode for reasoning models
+- ✓ Chat completions via both Claude and OpenAI API formats
+- ✓ Streaming responses for real-time interaction
+- ✓ Function/tool calling with automatic format translation
+- ✓ Vision/image analysis support
+- ✓ Thinking mode for reasoning models
 
 **Advanced Capabilities**
-- ✅ Dynamic parameter renaming for backend compatibility
-- ✅ Token counting and context limit enforcement
-- ✅ Rate limiting per provider (daily, hourly, 5-hour windows)
-- ✅ HTTPS/TSSL support with custom certificates
-- ✅ Comprehensive logging and monitoring
+- ✓ Dynamic parameter renaming for backend compatibility
+- ✓ Token counting and context limit enforcement
+- ✓ Rate limiting per provider (daily, hourly, 5-hour windows)
+- ✓ HTTPS/TSSL support with custom certificates
+- ✓ Comprehensive logging and monitoring
 
 ## 📊 Rate Limiting
 
@@ -225,37 +248,129 @@ bun run backend-selector-example.js
 ## ⚙️ Configuration Reference
 
 ### Server Settings
+
 ```toml
 host = "0.0.0.0"           # Bind address
 port = 8082                # HTTP port
-https_enabled = false      # Enable HTTPS
-ssl_key_file = ""          # SSL private key path
-ssl_cert_file = ""         # SSL certificate path
 request_timeout = 90       # Request timeout (seconds)
 max_retries = 2           # Max retry attempts
 log_level = "INFO"        # Logging level
 ```
 
+Enabling HTTPs:
+
+```toml
+https_enabled = false      # Enable HTTPS
+ssl_key_file = ""          # SSL private key path
+ssl_cert_file = ""         # SSL certificate path
+```
+
 ### Provider Settings
+
+Providers are whoever serves you the LLM. These can be local or cloud.
+
 ```toml
 [provider.openai]
 api_key = "sk-..."         # API key
 base_url = "https://api.openai.com/v1"  # Base URL
+
+[provider.cerebras]
+api_key = "csk-..."
+base_url = "https://api.cerebras.ai/v1"
+
+[provider.synthetic]
+api_key = "syn_..."
+base_url = "https://api.synthetic.new/openai/v1"
+
+[provider.lmstudio]
+api_key = "sk-your-lmstudio-api-key-here"
+base_url = "http://localhost:1234/v1"
 ```
 
-### Backend Configuration
+### Backend Configuration & Ordering
+
+Backends are the specific models you want to use from your providers. They are evaluated **in configuration order** - the first backend that meets all request requirements is selected.
+
+**Priority-Based Selection Algorithm:**
+1. Filter out failed/backends with cooldown
+2. Iterate through backends in configuration order
+3. Check each against constraints (context → vision → thinking → model patterns)
+4. Select first matching backend or `null` if none suitable
+
+#### Simple Examples
+
+**Single Backend:**
 ```toml
 [[backend]]
-model = "provider:model"   # provider:model format
-context = 128000          # Context window size
-vision = true             # Supports images
-thinking = false          # Supports reasoning
-max_per_day = 1000        # Daily limit
-model_match = ["*gpt*"]   # Model patterns
-key_rename = {}           # Parameter renaming
+model = "cerebras:gpt-4-small"
+context = 128000
+```
+*All requests go to this backend unless it fails or context is exceeded.*
+
+**Basic Failover:**
+```toml
+[[backend]]
+model = "cerebras:gpt-4-small"
+context = 128000
+
+[[backend]]
+model = "openai:gpt-4o"
+context = 128000
+```
+*First backend gets priority, second is fallback only.*
+
+#### Complex Example with Capabilities
+
+```toml
+# Fast & cheap for simple requests (highest priority)
+[[backend]]
+model = "synthetic:hf:Qwen/Qwen3-Coder-480B-A35B-Instruct"
+context = 256000
+
+# Vision-enabled (selected when images present)
+[[backend]]
+model = "openai:gpt-4o"
+context = 128000
+vision = true
+
+# Large context (selected when text exceeds first backend)
+[[backend]]
+model = "openai:gpt-4-turbo"
+context = 1000000
+
+# Reasoning specialist (pattern-based selection)
+[[backend]]
+model = "openai:o3"
+context = 1000000
+thinking = true
+model_match = ["*opus*", "*o1*"]
+key_rename = { max_tokens = "max_completion_tokens" }
 ```
 
-## 🔧 Troubleshooting
+**Selection Flow:**
+- **Simple text** → `cerebras:gpt-4-small` (first backend fits)
+- **Images** → `openai:gpt-4o` (skips first backend, needs vision)
+- **Large context (>128K)** → `openai:gpt-4-turbo` (exceeds first two context limits)
+- **Opus model + thinking** → `openai:o3` (matches thinking + model pattern)
+
+#### Configuration Parameters
+
+```toml
+[[backend]]
+model = "provider:model"           # Required: provider:model format
+context = 128000                  # Context window size
+vision = true/false               # Image support (default: false)
+thinking = true/false             # Reasoning support (default: false)
+max_per_day = 1000               # Daily request limit
+max_per_hour = 100              # Hourly request limit
+max_per_5hours = 400            # 5-hour window limit
+model_match = ["*pattern*"]      # Model matching patterns
+key_rename = { old_param = "new_param" }  # Parameter rename
+key_delete = "param_name"        # Remove incompatible params
+key_add = { new_param = "value" } # Add required params
+```
+
+## Troubleshooting
 
 **Connection Issues**
 - Verify server is running: `llmux start --verbose`
@@ -272,14 +387,14 @@ key_rename = {}           # Parameter renaming
 - Use model patterns to optimize for cost vs. capability
 - Enable verbose logging to diagnose routing decisions
 
-## 🆘 Support
+## Support
 
 For questions and support:
 - Check the `examples/` directory for configuration templates
 - Use `--verbose` flag for detailed operational logging
 - Review the configuration reference for available options
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
 

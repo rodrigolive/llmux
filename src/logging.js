@@ -36,7 +36,17 @@ export const logger = {
   critical: (...a) => logAt("CRITICAL", Colors.MAGENTA, "[CRIT ]", Colors.RESET, ...a),
 };
 
-export function log_request_beautifully({
+export function log_request_arrival({
+  method,
+  path,
+}) {
+  const timestamp = new Date().toISOString().replace('T', ' ');
+
+  const log_line = `${Colors.BOLD}${method} ${path}${Colors.RESET} ${Colors.DIM}⧗ ${timestamp}${Colors.RESET}`;
+  console.log(log_line);
+}
+
+export function log_request_completion({
   method,
   path,
   claude_model,
@@ -72,8 +82,6 @@ export function log_request_beautifully({
     ? `${Colors.GREEN}✓ ${status_code} OK${Colors.RESET}`
     : `${Colors.RED}✗ ${status_code}${Colors.RESET}`;
 
-  const timestamp = new Date().toISOString().replace('T', ' ');
-
   // Build request flags (only if config allows)
   let flags_str = '';
   if (config?.log_request_details) {
@@ -90,14 +98,43 @@ export function log_request_beautifully({
     flags_str = flags.length > 0 ? `${Colors.DIM}▤ ${flags.join(', ')}${Colors.RESET}` : '';
   }
 
-  const log_line = `${Colors.BOLD}${method} ${path}${Colors.RESET} ${status_str} ${Colors.DIM}⧗ ${timestamp}${Colors.RESET}${flags_str ? ' ' + flags_str : ''}`;
-  const parts = [claude_display, "→", openai_display, tools_str, messages_str, input_tokens_str, output_tokens_str, "tks"];
+  const log_line = `${status_str} • ${claude_display} → ${openai_display}${flags_str ? ' ' + flags_str : ''}`;
+  const parts = [tools_str, messages_str, input_tokens_str, output_tokens_str, "tks"];
   let model_line = parts.filter(p => String(p).trim()).join(" ");
   if (tokens_per_sec != null) model_line += ` ${tps_str}`;
   if (duration_ms != null) model_line += ` ${Colors.YELLOW}${duration_ms.toFixed(0)} ms${Colors.RESET}`;
 
   console.log(log_line);
   console.log(model_line);
+}
+
+export function log_request_beautifully({
+  method,
+  path,
+  claude_model,
+  openai_model,
+  num_messages,
+  num_tools,
+  status_code,
+  num_tokens,
+  output_tokens,
+  tokens_per_sec,
+  duration_ms,
+  config = null,
+  has_images = false,
+  thinking = false,
+  stream = false,
+  temperature = null,
+  max_tokens = null,
+  tools = null,
+}) {
+  // Legacy function - log both arrival and completion for backward compatibility
+  log_request_arrival({ method, path });
+  log_request_completion({
+    method, path, claude_model, openai_model, num_messages, num_tools,
+    status_code, num_tokens, output_tokens, tokens_per_sec, duration_ms, config,
+    has_images, thinking, stream, temperature, max_tokens, tools
+  });
 }
 
 export function log_failover_beautifully(error_code, original_model, failover_backend, num_tokens) {

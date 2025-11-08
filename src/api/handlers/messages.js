@@ -6,7 +6,7 @@ import { convert_claude_to_openai } from "../../conversion/claude_to_openai.js";
 import { convert_openai_to_claude_response } from "../../conversion/openai_to_claude.js";
 import { isResponsesAPI } from "../../provider/openai_client.js";
 import { countTokensFast } from "../../tokenize/tiktoken.js";
-import { log_request_beautifully } from "../../logging.js";
+import { log_request_arrival, log_request_completion } from "../../logging.js";
 import { estimateTokens } from "../../utils/token-counter.js";
 
 export function buildMessagesHandler({ config, model_manager, openai_client }) {
@@ -48,6 +48,12 @@ export function buildMessagesHandler({ config, model_manager, openai_client }) {
     // Include both the primary backend and other failover backends
     const allBackends = [originalBackend, ...originalFailover];
     config.failover = allBackends.filter(backend => backend !== selectedBackend);
+
+    // Log request arrival as soon as we have the basic info
+    log_request_arrival({
+      method: "POST",
+      path: "/v1/messages",
+    });
 
     try {
       // convert Claude -> OpenAI request
@@ -111,8 +117,8 @@ export function buildMessagesHandler({ config, model_manager, openai_client }) {
       const max_tokens = body?.max_tokens ?? null;
       const tools = body?.tools ?? null;
 
-      // Use our pre-selected backend
-      log_request_beautifully({
+      // Log completion when request is done
+      log_request_completion({
         method: "POST",
         path: "/v1/messages",
         claude_model: display_model,

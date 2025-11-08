@@ -7,7 +7,7 @@ import { applyKeyAdditions } from "../../utils/key_add.js";
 import { applyKeyRenames } from "../../utils/key_rename.js";
 import { isResponsesAPI } from "../../provider/openai_client.js";
 import { countTokensFast } from "../../tokenize/tiktoken.js";
-import { log_request_beautifully } from "../../logging.js";
+import { log_request_arrival, log_request_completion } from "../../logging.js";
 import { estimateTokens } from "../../utils/token-counter.js";
 
 export function buildChatCompletionsHandler({ config, model_manager, openai_client }) {
@@ -92,15 +92,21 @@ export function buildChatCompletionsHandler({ config, model_manager, openai_clie
 
       logger.debug("Final OpenAI request payload:", JSON.stringify(finalRequest, null, 2));
 
-      // Count tokens for log (best effort)
-      let num_tokens = null;
-      try {
-        num_tokens = await countTokensFast(finalRequest.messages || [], finalRequest.model || "gpt-4o");
-      } catch {
-        num_tokens = null;
-      }
+    // Log request arrival as soon as we have the basic info
+    log_request_arrival({
+      method: "POST",
+      path: "/v1/chat/completions",
+    });
 
-      if (req.signal.aborted) throw httpError(499, "Client disconnected");
+    // Count tokens for log (best effort)
+    let num_tokens = null;
+    try {
+      num_tokens = await countTokensFast(finalRequest.messages || [], finalRequest.model || "gpt-4o");
+    } catch {
+      num_tokens = null;
+    }
+
+    if (req.signal.aborted) throw httpError(499, "Client disconnected");
 
       const logRequest = async ({ duration_ms = null, output_tokens, tokens_per_sec } = {}) => {
         const num_messages = (finalRequest?.messages || []).length;
@@ -115,7 +121,7 @@ export function buildChatCompletionsHandler({ config, model_manager, openai_clie
         const max_tokens = body?.max_tokens ?? null;
         const tools = body?.tools ?? null;
 
-        await log_request_beautifully({
+        await log_request_completion({
           method: "POST",
           path: "/v1/chat/completions",
           claude_model: display_model || finalRequest.model,
